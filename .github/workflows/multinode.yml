@@ -360,20 +360,15 @@ jobs:
             ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
-      - name: Break for manual interaction
+      - name: Break on failure
         run: |
-          function wait() {
-            duration=${{ inputs.break_duration }}m
-            echo "Breaking on failure for $duration"
-            sleep $duration
-          }
+          sleep ${{ env.break_duration }}m
+        if: ${{ failure() && steps.config_ach.outcome == 'success' && contains(fromJSON('["failure", "always"]'), env.break_on) }}
 
-          if [[ ${{ inputs.break_on }} =~ '(failure|always)' ]] && [[ ${{ failure() }} = 'true' ]]; then
-            wait "failure"
-          elif [[ ${{ inputs.break_on }} =~ '(success|always)' ]] && [[ ${{ failure() }} = 'false' ]]; then
-            wait "success"
-          fi
-        if: ${{ always() && steps.config_ach.outcome == 'success' }}
+      - name: Break on success
+        run: |
+          sleep ${{ env.break_duration }}m
+        if: ${{ steps.config_ach.outcome == 'success' && contains(fromJSON('["success", "always"]'), env.break_on) }}
 
       - name: Destroy
         run: terraform destroy -auto-approve -input=false
