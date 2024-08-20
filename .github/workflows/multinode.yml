@@ -284,7 +284,6 @@ jobs:
           OS_APPLICATION_CREDENTIAL_SECRET: ${{ secrets.OS_APPLICATION_CREDENTIAL_SECRET }}
 
       - name: Terraform Apply
-        id: tf_apply
         run: |
           for attempt in $(seq 3); do
               if terraform apply -auto-approve -input=false; then
