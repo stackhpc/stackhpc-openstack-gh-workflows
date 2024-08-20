@@ -150,8 +150,9 @@ jobs:
       - name: Generate a VXLAN VNI
         id: vxlan_vni
         run: |
-          # VXLAN VNI is 24 bits
-          max_vni=$(((2 << (24 - 1)) - 1))
+          # There is an undocumented restriction limiting us to a max VNI of
+          # 100,000.
+          max_vni=100000
           timestamp=$(date +%s)
           vni=$(((timestamp % max_vni) + 1))
           echo vxlan_vni=$vni >> $GITHUB_OUTPUT
