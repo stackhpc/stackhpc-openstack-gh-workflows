@@ -4,7 +4,6 @@
 # the cloud.
 
 name: Multinode
-
 on:
   workflow_call:
     inputs:
@@ -33,7 +32,7 @@ on:
         type: string
         default: '9'
       ssh_username:
-        description: User for terraform to access the all-in-one VM
+        description: User for terraform to access the Multinode hosts
         type: string
         default: cloud-user
       neutron_plugin:
@@ -43,6 +42,7 @@ on:
       stackhpc_kayobe_config_version:
         description: stackhpc-kayobe-config version
         type: string
+        required: true
       stackhpc_kayobe_config_previous_version:
         description: stackhpc-kayobe-config previous version
         type: string
@@ -55,6 +55,7 @@ on:
         type: boolean
         default: false
       break_on:
+        # Supported values: 'always', 'never', 'failure', 'success'
         description: When to break execution for manual interaction
         type: string
         default: never
@@ -145,6 +146,15 @@ jobs:
           ansible-galaxy role install -r ansible/requirements.yml -p ansible/roles &&
           ansible-galaxy collection install -r ansible/requirements.yml -p ansible/collections
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+
+      - name: Generate a VXLAN VNI
+        id: vxlan_vni
+        run: |
+          # VXLAN VNI is 24 bits
+          max_vni=$(((2 << (24 - 1)) - 1))
+          timestamp=$(date +%s)
+          vni=$(((timestamp % max_vni) + 1))
+          echo vxlan_vni=$vni >> $GITHUB_OUTPUT
 
       - name: Generate SSH keypair
         run: ssh-keygen -f id_rsa -N ''
@@ -241,7 +251,7 @@ jobs:
           cat << EOF >> ansible/vars/defaults.yml
           kayobe_config_version: ${{ inputs.upgrade && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
           ssh_key_path: ${{ github.workspace }}/terraform-kayobe-multinode/id_rsa
-          vxlan_vni: 53299
+          vxlan_vni: ${{ steps.vxlan_vni.outputs.vxlan_vni }}
           vault_password_path: ${{ github.workspace }}/terraform-kayobe-multinode/vault-pw
           kayobe_config_custom:
             - path: zz-multinode.yml
@@ -350,9 +360,20 @@ jobs:
             ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
-      - name: Break on failure
-        run: sleep ${{ inputs.break_duration }}m
-        if: ${{ failure() && steps.config_ach.outcome == 'success' && inputs.break_on == 'failure' }}
+      - name: Break for manual interaction
+        run: |
+          function wait() {
+            duration=${{ inputs.break_duration }}m
+            echo "Breaking on failure for $duration"
+            sleep $duration
+          }
+
+          if [[ ${{ inputs.break_on }} =~ '(failure|always)' ]] && [[ ${{ failure() }} = 'true' ]]; then
+            wait "failure"
+          elif [[ ${{ inputs.break_on }} =~ '(success|always)' ]] && [[ ${{ failure() }} = 'false' ]]; then
+            wait "success"
+          fi
+        if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
       - name: Destroy
         run: terraform destroy -auto-approve -input=false
