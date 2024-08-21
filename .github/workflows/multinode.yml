@@ -362,13 +362,13 @@ jobs:
 
       - name: Break on failure
         run: |
-          sleep ${{ env.break_duration }}m
-        if: ${{ failure() && steps.config_ach.outcome == 'success' && contains(fromJSON('["failure", "always"]'), env.break_on) }}
+          sleep ${{ inputs.break_duration }}m
+        if: ${{ failure() && steps.config_ach.outcome == 'success' && contains(fromJSON('["failure", "always"]'), inputs.break_on) }}
 
       - name: Break on success
         run: |
-          sleep ${{ env.break_duration }}m
-        if: ${{ steps.config_ach.outcome == 'success' && contains(fromJSON('["success", "always"]'), env.break_on) }}
+          sleep ${{ inputs.break_duration }}m
+        if: ${{ steps.config_ach.outcome == 'success' && contains(fromJSON('["success", "always"]'), inputs.break_on) }}
 
       - name: Destroy
         run: terraform destroy -auto-approve -input=false
