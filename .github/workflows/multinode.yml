@@ -371,7 +371,19 @@ jobs:
         if: ${{ steps.config_ach.outcome == 'success' && contains(fromJSON('["success", "always"]'), inputs.break_on) }}
 
       - name: Destroy
-        run: terraform destroy -auto-approve -input=false
+        run: |
+          for attempt in $(seq 5); do
+              if terraform destroy -auto-approve -input=false -lock-timeout=200s; then
+                  echo "Destroyed infrastructure on attempt $attempt"
+                  exit 0
+              fi
+              echo "Failed to destroy infrastructure on attempt $attempt"
+              sleep 120
+          done
+          echo "Failed to destroy infrastructure after $attempt attempts"
+          echo "Forcefully destroying infrastructure"
+          terraform destroy -auto-approve -input=false -lock=false
+          exit 1
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
           OS_CLOUD: ${{ vars.OS_CLOUD }}
