@@ -80,7 +80,7 @@ on:
       OS_APPLICATION_CREDENTIAL_SECRET:
         required: true
       SLACK_WEBHOOK_URL:
-        required: true
+        required: false
 
 jobs:
   multinode:
