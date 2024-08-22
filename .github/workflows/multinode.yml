@@ -93,6 +93,12 @@ jobs:
           exit 1
         if: ${{ inputs.upgrade && inputs.stackhpc_kayobe_config_previous_version == '' }}
 
+      - name: Fail if no SSH key is provided for break_on
+        run: |
+          echo "break_on is set to ${{ inputs.break_on }} but an SSH public key has not been provided"
+          exit 1
+        if: ${{ inputs.break_on != 'never' && inputs.ssh_key == '' }}
+
       - name: Install Package
         uses: ConorMacBride/install-package@main
         with:
