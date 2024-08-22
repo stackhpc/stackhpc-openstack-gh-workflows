@@ -66,6 +66,10 @@ on:
       ssh_key:
         description: SSH public key to authorise on Ansible control host
         type: string
+      enable_slack_alert:
+        description: Whether to send a Slack message to a channel if the job fails
+        type: boolean
+        default: false
     secrets:
       KAYOBE_VAULT_PASSWORD_CI_MULTINODE:
         required: true
@@ -75,6 +79,8 @@ on:
         required: true
       OS_APPLICATION_CREDENTIAL_SECRET:
         required: true
+      SLACK_WEBHOOK_URL:
+        required: false
 
 jobs:
   multinode:
@@ -92,6 +98,12 @@ jobs:
           echo "StackHPC Kayobe Configuration previous version must be defined for upgrades"
           exit 1
         if: ${{ inputs.upgrade && inputs.stackhpc_kayobe_config_previous_version == '' }}
+
+      - name: Fail if no SSH key is provided for break_on
+        run: |
+          echo "break_on is set to ${{ inputs.break_on }} but an SSH public key has not been provided"
+          exit 1
+        if: ${{ inputs.break_on != 'never' && inputs.ssh_key == '' }}
 
       - name: Install Package
         uses: ConorMacBride/install-package@main
@@ -353,12 +365,46 @@ jobs:
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
       - name: Upload test result artifacts
+        id: upload-results
         uses: actions/upload-artifact@v4
         with:
           name: test-results-multinode-${{ inputs.os_distribution }}-${{ inputs.os_release }}-${{ inputs.neutron_plugin }}${{ inputs.upgrade && '-upgrade' || '' }}
           path: |
             ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
+
+      - name: Send message to Slack via Workflow Builder
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "channel-id": "${{ env.SLACK_CHANNEL_ID }}",
+              "inputs": "${{ env.INPUTS }}",
+              "message": "${{ env.MESSAGE }}",
+              "results-url": "${{ env.RESULTS_URL }}",
+              "workflow-url": "${{ env.WORKFLOW_URL }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # #release-train-alerts
+          SLACK_CHANNEL_ID: C03B28HRP53
+          INPUTS: >-
+            name: ${{ inputs.multinode_name }}\n
+            controllers: ${{ inputs.multinode_controller_count }}\n
+            computes: ${{ inputs.multinode_compute_count }}\n
+            storage: ${{ inputs.multinode_storage_count }}\n
+            os_distribution: ${{ inputs.os_distribution }}\n
+            os_release: ${{ inputs.os_release }}\n
+            ssh_username: ${{ inputs.ssh_username }}\n
+            neutron_plugin: ${{ inputs.neutron_plugin }}\n
+            stackhpc_kayobe_config_version: ${{ inputs.stackhpc_kayobe_config_version }}\n
+            stackhpc_kayobe_config_previous_version: ${{ inputs.stackhpc_kayobe_config_previous_version }}\n
+            terraform_kayobe_multinode_version: ${{ inputs.terraform_kayobe_multinode_version }}\n
+            upgrade: ${{ inputs.upgrade }}\n
+          MESSAGE: "Multinode workflow failed :sob:"
+          RESULTS_URL: "${{ steps.upload-results.outputs.artifact-url || 'N/A' }}"
+          WORKFLOW_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        if: ${{ failure() && inputs.enable_slack_alert }}
 
       - name: Break on failure
         run: |
