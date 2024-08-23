@@ -88,6 +88,7 @@ jobs:
     runs-on: arc-skc-aio-runner
     environment: Leafcloud
     permissions: {}
+    timeout-minutes: 2880
     env:
       ANSIBLE_FORCE_COLOR: True
       KAYOBE_ENVIRONMENT: ci-multinode
