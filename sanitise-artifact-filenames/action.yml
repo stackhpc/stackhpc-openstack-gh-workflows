@@ -1,0 +1,14 @@
+---
+name: Sanitise filenames for GitHub Actions artifacts
+description: >
+  Renames files and directories to be accepted by the GitHub Actions
+  upload-artifact action.
+inputs:
+  path:
+    description: The directory containing files to be sanitised
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Sanitise filenames for GitHub Actions artifacts
+      run: python3 sanitise-artifact-filenames.py ${{ inputs.path }}
