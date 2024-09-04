@@ -356,13 +356,14 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
-      # NOTE: The tmux log rename is due to GitHub Actions not accepting files with a colon as artifacts.
-      - name: Fix up deployment log filename
-        run: |
-          if [[ -f ${{ github.workspace }}/logs/tmux.kayobe:0.log ]]; then
-            mv ${{ github.workspace }}/logs/tmux.kayobe:0.log ${{ github.workspace }}/logs/tmux.kayobe.log
-          fi
-        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+      # GitHub Actions does not accept filenames with certain characters, and
+      # fails the upload-artifact action if any exist.  The tmux log file
+      # contains a colon, as do previous Tempest results directories.
+      - name: Sanitise artifact filenames
+        uses: stackhpc/stackhpc-openstack-gh-workflows/sanitise-artifact-filenames@1.1.0
+        with:
+          path: |
+            ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
       - name: Upload test result artifacts
