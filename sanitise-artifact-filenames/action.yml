@@ -11,5 +11,5 @@ runs:
   using: composite
   steps:
     - name: Sanitise filenames for GitHub Actions artifacts
-      run: python3 sanitise-artifact-filenames.py ${{ inputs.path }}
+      run: python3 ${{ github.action_path }}/sanitise-artifact-filenames.py ${{ inputs.path }}
       shell: bash
