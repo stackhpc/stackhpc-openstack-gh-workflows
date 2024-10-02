@@ -379,7 +379,7 @@ jobs:
         with:
           name: test-results-multinode-${{ inputs.os_distribution }}-${{ inputs.os_release }}-${{ inputs.neutron_plugin }}${{ inputs.upgrade && '-upgrade' || '' }}
           path: |
-            ${{ github.workspace }}/logs/
+            ${{ github.workspace }}/logs/t*
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
       - name: Send message to Slack via Workflow Builder
