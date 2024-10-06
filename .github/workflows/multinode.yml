@@ -109,7 +109,7 @@ jobs:
       - name: Install Package
         uses: ConorMacBride/install-package@main
         with:
-          apt: git unzip nodejs python3-pip python3-venv rsync
+          apt: git unzip nodejs python3-pip python3-venv rsync openssh-client
 
       # If testing upgrade, checkout previous release, otherwise checkout current branch
       - name: Checkout ${{ inputs.upgrade && 'previous release' || 'current' }} config
