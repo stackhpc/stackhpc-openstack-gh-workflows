@@ -373,6 +373,12 @@ jobs:
             ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
+      - name: Compress logs
+        run: |
+          tar -czf logs.tar.gz -C ${{ github.workspace }}/logs .
+        working-directory: ${{ github.workspace }}
+        if: ${{ always() && steps.config_ach.outcome == 'success' }}
+
       - name: Upload test result artifacts
         id: upload-results
         uses: actions/upload-artifact@v4
