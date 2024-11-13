@@ -327,6 +327,13 @@ jobs:
           ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
 
+      - name: Run upgrade prerequisites
+        run: |
+          source venv/bin/activate &&
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=upgrade_prerequisites
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: inputs.upgrade
+
       - name: Upgrade Ansible control host
         run: |
           source venv/bin/activate &&
