@@ -51,9 +51,10 @@ on:
         type: string
         default: main
       upgrade:
+        # Supported values: 'none', 'minor', 'major'
         description: Whether to perform an upgrade
-        type: boolean
-        default: false
+        default: none
+        type: string
       break_on:
         # Supported values: 'always', 'never', 'failure', 'success'
         description: When to break execution for manual interaction
@@ -98,7 +99,7 @@ jobs:
         run: |
           echo "StackHPC Kayobe Configuration previous version must be defined for upgrades"
           exit 1
-        if: ${{ inputs.upgrade && inputs.stackhpc_kayobe_config_previous_version == '' }}
+        if: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version == '' }}
 
       - name: Fail if no SSH key is provided for break_on
         run: |
@@ -112,11 +113,11 @@ jobs:
           apt: git unzip nodejs python3-pip python3-venv rsync openssh-client
 
       # If testing upgrade, checkout previous release, otherwise checkout current branch
-      - name: Checkout ${{ inputs.upgrade && 'previous release' || 'current' }} config
+      - name: Checkout ${{ (inputs.upgrade != 'none') && 'previous release' || 'current' }} config
         uses: actions/checkout@v4
         with:
           repository: stackhpc/stackhpc-kayobe-config
-          ref: ${{ inputs.upgrade && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
+          ref: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
 
       - name: Checkout terraform-kayobe-multinode
         uses: actions/checkout@v4
@@ -263,7 +264,7 @@ jobs:
           echo '${{ env.KAYOBE_VAULT_PASSWORD }}' > vault-pw
 
           cat << EOF >> ansible/vars/defaults.yml
-          kayobe_config_version: ${{ inputs.upgrade && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
+          kayobe_config_version: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
           ssh_key_path: ${{ github.workspace }}/terraform-kayobe-multinode/id_rsa
           vxlan_vni: ${{ steps.vxlan_vni.outputs.vxlan_vni }}
           vault_password_path: ${{ github.workspace }}/terraform-kayobe-multinode/vault-pw
@@ -332,28 +333,35 @@ jobs:
           source venv/bin/activate &&
           ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=upgrade_prerequisites
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
-        if: inputs.upgrade
+        if: inputs.upgrade == 'major'
 
       - name: Upgrade Ansible control host
         run: |
           source venv/bin/activate &&
           ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack-config.yml -e upgrade=true -e kayobe_config_version=${{ inputs.stackhpc_kayobe_config_version }}
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
-        if: inputs.upgrade
+        if: inputs.upgrade != 'none'
 
-      - name: Upgrade OpenStack
+      - name: Run major OpenStack upgrade
         run: |
           source venv/bin/activate &&
           ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=upgrade_overcloud
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
-        if: inputs.upgrade
+        if: inputs.upgrade == 'major'
+
+      - name: Run minor OpenStack upgrade
+        run: |
+          source venv/bin/activate &&
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=minor_upgrade
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: inputs.upgrade == 'minor'
 
       - name: Run Tempest tests
         run: |
           source venv/bin/activate &&
           ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=run_tempest
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
-        if: inputs.upgrade
+        if: inputs.upgrade != 'none'
 
       - name: Download deployment logs
         run: |
@@ -377,7 +385,7 @@ jobs:
         id: upload-results
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-multinode-${{ inputs.os_distribution }}-${{ inputs.os_release }}-${{ inputs.neutron_plugin }}${{ inputs.upgrade && '-upgrade' || '' }}
+          name: test-results-multinode-${{ inputs.os_distribution }}-${{ inputs.os_release }}-${{ inputs.neutron_plugin }}${{ (inputs.upgrade != 'none') && '-upgrade' || '' }}
           path: |
             ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
