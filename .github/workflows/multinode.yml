@@ -363,6 +363,11 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
+      - name: Print final lines of tmux log
+        run: |
+          tail -n 250 ${{ github.workspace }}/logs/tmux.kayobe:0.log
+        if: ${{ failure() && steps.config_ach.outcome == 'success' }}
+
       # GitHub Actions does not accept filenames with certain characters, and
       # fails the upload-artifact action if any exist.  The tmux log file
       # contains a colon, as do previous Tempest results directories.
