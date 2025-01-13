@@ -226,7 +226,7 @@ jobs:
           infra_vm_flavor    = "${{ env.MULTINODE_INFRA_VM_FLAVOR }}"
           infra_vm_disk_size = 100
 
-          compute_tags = ["gh-actions-multinode"]
+          instance_tags = ["gh-actions-multinode"]
           EOF
 
           if [[ "${{ inputs.ssh_key }}" != "" ]]; then
