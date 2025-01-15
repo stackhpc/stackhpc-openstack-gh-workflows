@@ -222,7 +222,7 @@ jobs:
           storage_flavor    = "${{ env.MULTINODE_STORAGE_FLAVOR }}"
           storage_disk_size = 100
 
-          deploy_wazuh       = false
+          deploy_wazuh       = true
           infra_vm_flavor    = "${{ env.MULTINODE_INFRA_VM_FLAVOR }}"
           infra_vm_disk_size = 100
 
