@@ -7,6 +7,11 @@ name: Multinode
 on:
   workflow_call:
     inputs:
+      runner_env:
+        description: Which cloud to run on?
+        type: string
+        default: SMS Lab
+        required: false
       multinode_name:
         description: Multinode cluster name
         type: string
@@ -84,10 +89,16 @@ on:
         required: false
 
 jobs:
+  runner-selection:
+    uses: stackhpc/stackhpc-kayobe-config/.github/workflows/runner-selector.yml@stackhpc/2024.1
+    with:
+      runner_env: ${{ inputs.runner_env }}
   multinode:
     name: Multinode
-    runs-on: arc-skc-aio-runner
-    environment: Leafcloud
+    environment: ${{ inputs.runner_env }}
+    runs-on: ${{ needs.runner-selection.outputs.runner_name_aio }}
+    needs:
+      - runner-selection
     permissions: {}
     timeout-minutes: 2880
     env:
