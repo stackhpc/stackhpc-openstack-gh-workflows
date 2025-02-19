@@ -228,6 +228,7 @@ jobs:
 
           ssh_public_key = "id_rsa.pub"
           ssh_user       = "${{ env.SSH_USERNAME }}"
+          security_group = ["kayobe-runner"]
 
           storage_count     = "${{ env.MULTINODE_STORAGE_COUNT }}"
           storage_flavor    = "${{ env.MULTINODE_STORAGE_FLAVOR }}"
