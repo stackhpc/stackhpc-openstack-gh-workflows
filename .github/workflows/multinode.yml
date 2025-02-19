@@ -240,7 +240,7 @@ jobs:
           instance_tags = ["gh-actions-multinode"]
           EOF
 
-          if [[ "${{ inputs.ssh_key }}" != "" ]]; then
+          if [[ "${{ inputs.ssh_key }}" != "" && "${{ inputs.runner_env }}" == "Leafcloud" ]]; then
             cat << EOF >> terraform.tfvars
           add_ansible_control_fip = true
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
