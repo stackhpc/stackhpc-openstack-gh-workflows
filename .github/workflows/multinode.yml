@@ -212,6 +212,7 @@ jobs:
           ansible_control_vm_flavor = "${{ env.MULTINODE_ANSIBLE_CONTROL_VM_FLAVOR }}"
           ansible_control_vm_name   = "ansible-control"
           ansible_control_disk_size = 100
+          ansible_control_security_group = "kayobe-runner"
 
           seed_vm_flavor = "${{ env.MULTINODE_SEED_VM_FLAVOR }}"
           seed_disk_size = 100
