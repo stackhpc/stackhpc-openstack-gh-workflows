@@ -39,6 +39,10 @@ on:
         description: Neutron ML2 plugin
         type: string
         default: ovn
+      secret_store:
+        description: Secret store to use as Certificate Authority
+        type: string
+        default: openbao
       stackhpc_kayobe_config_version:
         description: stackhpc-kayobe-config version
         type: string
@@ -270,12 +274,14 @@ jobs:
           ssh_key_path: ${{ github.workspace }}/terraform-kayobe-multinode/id_rsa
           vxlan_vni: ${{ steps.vxlan_vni.outputs.vxlan_vni }}
           vault_password_path: ${{ github.workspace }}/terraform-kayobe-multinode/vault-pw
+          certificate_authority: ${{ inputs.secret_store }}
           kayobe_config_custom:
             - path: zz-multinode.yml
               block: |
                 os_distribution: ${{ env.OS_DISTRIBUTION }}
                 os_release: "${{ env.OS_RELEASE }}"
                 kolla_enable_ovn: ${{ env.ENABLE_OVN }}
+                stackhpc_enable_openbao: ${{ env.ENABLE_OPENBAO }}
           EOF
 
           if [[ "${{ env.SSH_KEY }}" != "" ]]; then
@@ -287,6 +293,7 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
           ENABLE_OVN: ${{ inputs.neutron_plugin == 'ovn' }}
+          ENABLE_OPENBAO: ${{ inputs.secret_store == 'openbao' }}
           OS_DISTRIBUTION: ${{ inputs.os_distribution }}
           OS_RELEASE: ${{ inputs.os_release }}
           SSH_KEY: ${{ inputs.ssh_key }}
