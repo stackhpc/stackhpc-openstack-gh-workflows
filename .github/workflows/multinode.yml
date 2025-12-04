@@ -349,6 +349,7 @@ jobs:
       - name: Checkout current terraform-kayobe-multinode
         uses: actions/checkout@v4
         with:
+          clean: false
           repository: stackhpc/terraform-kayobe-multinode
           ref: ${{ inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
@@ -440,6 +441,7 @@ jobs:
             neutron_plugin: ${{ inputs.neutron_plugin }}\n
             stackhpc_kayobe_config_version: ${{ inputs.stackhpc_kayobe_config_version }}\n
             stackhpc_kayobe_config_previous_version: ${{ inputs.stackhpc_kayobe_config_previous_version }}\n
+            terraform_kayobe_multinode_previous_version: ${{ inputs.terraform_kayobe_multinode_previous_version }}\n
             terraform_kayobe_multinode_version: ${{ inputs.terraform_kayobe_multinode_version }}\n
             upgrade: ${{ inputs.upgrade }}\n
           MESSAGE: "Multinode workflow failed :sob:"
