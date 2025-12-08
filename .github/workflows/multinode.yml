@@ -346,6 +346,12 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: inputs.upgrade == 'major'
 
+      - name: Stash changes before checking out to current terraform-kayobe-multinode
+        run: |
+          git stash
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: inputs.upgrade == 'major'
+
       - name: Checkout current terraform-kayobe-multinode
         uses: actions/checkout@v4
         with:
@@ -354,6 +360,26 @@ jobs:
           ref: ${{ inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
         if: inputs.upgrade == 'major'
+
+      - name: Pop stashed terraform-kayobe-multinode changes
+        id: pop-tkm
+        run: |
+          git stash pop
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: inputs.upgrade == 'major'
+
+      - name: Check terraform-kayobe-multinode git diff on pop failure
+        id: git-diff-tkm
+        run: |
+          echo "GIT_DIFF_TKM=$(git diff)" >> $GITHUB_OUTPUT
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: steps.pop-tkm.outcome == 'failure'
+
+      - name: Display terraform-kayobe-multinode git diff on pop failure
+        run: |
+          echo "${{ steps.git-diff-tkm.outputs.GIT_DIFF_TKM }}"
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: steps.pop-tkm.outcome == 'failure'
 
       - name: Upgrade Ansible control host
         run: |
