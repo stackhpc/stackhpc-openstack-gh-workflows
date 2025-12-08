@@ -50,6 +50,9 @@ on:
         description: terraform-kayobe-multinode version
         type: string
         default: main
+      terraform_kayobe_multinode_previous_version:
+        description: terraform-kayobe-multinode previous version
+        type: string
       upgrade:
         # Supported values: 'none', 'minor', 'major'
         description: Whether to perform an upgrade
@@ -95,11 +98,17 @@ jobs:
       KAYOBE_ENVIRONMENT: ci-multinode
       KAYOBE_VAULT_PASSWORD: ${{ secrets.KAYOBE_VAULT_PASSWORD_CI_MULTINODE }}
     steps:
-      - name: Fail if previous version is not defined
+      - name: Fail if stackhpc-kayobe-config previous version is not defined
         run: |
           echo "StackHPC Kayobe Configuration previous version must be defined for upgrades"
           exit 1
         if: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version == '' }}
+
+      - name: Fail if terraform-kayobe-multinode previous version is not defined
+        run: |
+          echo "StackHPC Kayobe Configuration previous version must be defined for upgrades"
+          exit 1
+        if: ${{ (inputs.upgrade == 'major') && inputs.terraform_kayobe_multinode_previous_version == '' }}
 
       - name: Fail if no SSH key is provided for break_on
         run: |
@@ -119,11 +128,11 @@ jobs:
           repository: stackhpc/stackhpc-kayobe-config
           ref: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
 
-      - name: Checkout terraform-kayobe-multinode
+      - name: Checkout ${{ (inputs.upgrade == 'major') && 'previous release' || 'current' }} terraform-kayobe-multinode
         uses: actions/checkout@v4
         with:
           repository: stackhpc/terraform-kayobe-multinode
-          ref: ${{ inputs.terraform_kayobe_multinode_version }}
+          ref: ${{ (inputs.upgrade == 'major') && inputs.terraform_kayobe_multinode_previous_version || inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
 
       - name: Make sure dockerd is running and test Docker
@@ -337,6 +346,41 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: inputs.upgrade == 'major'
 
+      - name: Stash changes before checking out to current terraform-kayobe-multinode
+        run: |
+          git stash
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: inputs.upgrade == 'major'
+
+      - name: Checkout current terraform-kayobe-multinode
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          repository: stackhpc/terraform-kayobe-multinode
+          ref: ${{ inputs.terraform_kayobe_multinode_version }}
+          path: terraform-kayobe-multinode
+        if: inputs.upgrade == 'major'
+
+      - name: Pop stashed terraform-kayobe-multinode changes
+        id: pop-tkm
+        run: |
+          git stash pop
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: inputs.upgrade == 'major'
+
+      - name: Check terraform-kayobe-multinode git diff on pop failure
+        id: git-diff-tkm
+        run: |
+          echo "GIT_DIFF_TKM=$(git diff)" >> $GITHUB_OUTPUT
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: steps.pop-tkm.outcome == 'failure'
+
+      - name: Display terraform-kayobe-multinode git diff on pop failure
+        run: |
+          echo "${{ steps.git-diff-tkm.outputs.GIT_DIFF_TKM }}"
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        if: steps.pop-tkm.outcome == 'failure'
+
       - name: Upgrade Ansible control host
         run: |
           source venv/bin/activate &&
@@ -423,6 +467,7 @@ jobs:
             neutron_plugin: ${{ inputs.neutron_plugin }}\n
             stackhpc_kayobe_config_version: ${{ inputs.stackhpc_kayobe_config_version }}\n
             stackhpc_kayobe_config_previous_version: ${{ inputs.stackhpc_kayobe_config_previous_version }}\n
+            terraform_kayobe_multinode_previous_version: ${{ inputs.terraform_kayobe_multinode_previous_version }}\n
             terraform_kayobe_multinode_version: ${{ inputs.terraform_kayobe_multinode_version }}\n
             upgrade: ${{ inputs.upgrade }}\n
           MESSAGE: "Multinode workflow failed :sob:"
