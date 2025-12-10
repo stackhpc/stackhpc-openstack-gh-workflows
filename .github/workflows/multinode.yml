@@ -67,8 +67,8 @@ on:
         description: How long to break execution for (minutes)
         type: number
         default: 60
-      ssh_key:
-        description: SSH public key to authorise on Ansible control host
+      ssh_keys:
+        description: SSH public keys to authorise on Ansible control host (JSON string array or empty if none)
         type: string
       enable_slack_alert:
         description: Whether to send a Slack message to a channel if the job fails
@@ -114,7 +114,7 @@ jobs:
         run: |
           echo "break_on is set to ${{ inputs.break_on }} but an SSH public key has not been provided"
           exit 1
-        if: ${{ inputs.break_on != 'never' && inputs.ssh_key == '' }}
+        if: ${{ inputs.break_on != 'never' && inputs.ssh_keys == '' }}
 
       - name: Install Package
         uses: ConorMacBride/install-package@main
@@ -238,7 +238,7 @@ jobs:
           instance_tags = ["gh-actions-multinode"]
           EOF
 
-          if [[ "${{ inputs.ssh_key }}" != "" ]]; then
+          if [[ ${{ toJSON(inputs.ssh_keys) }} != "" ]]; then
             cat << EOF >> terraform.tfvars
           add_ansible_control_fip = true
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
@@ -287,10 +287,9 @@ jobs:
                 kolla_enable_ovn: ${{ env.ENABLE_OVN }}
           EOF
 
-          if [[ "${{ env.SSH_KEY }}" != "" ]]; then
+          if [[ ${{ toJSON(inputs.ssh_keys) }} != "" ]]; then
             cat << EOF >> ansible/vars/defaults.yml
-          extra_ssh_public_keys:
-            - "${{ env.SSH_KEY }}"
+          extra_ssh_public_keys: ${{ inputs.ssh_keys }}
           EOF
           fi
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
@@ -298,7 +297,6 @@ jobs:
           ENABLE_OVN: ${{ inputs.neutron_plugin == 'ovn' }}
           OS_DISTRIBUTION: ${{ inputs.os_distribution }}
           OS_RELEASE: ${{ inputs.os_release }}
-          SSH_KEY: ${{ inputs.ssh_key }}
 
       - name: Terraform Plan
         run: terraform plan -input=false
