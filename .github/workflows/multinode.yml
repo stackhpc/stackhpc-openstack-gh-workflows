@@ -68,7 +68,10 @@ on:
         type: number
         default: 60
       ssh_key:
-        description: SSH public key to authorise on Ansible control host
+        description: DEPRECATED single SSH public key to authorise on Ansible control host (plain text or empty) DEPRECATED
+        type: string
+      ssh_keys:
+        description: SSH public keys to authorise on Ansible control host (JSON string array or empty if none)
         type: string
       enable_slack_alert:
         description: Whether to send a Slack message to a channel if the job fails
@@ -112,9 +115,21 @@ jobs:
 
       - name: Fail if no SSH key is provided for break_on
         run: |
-          echo "break_on is set to ${{ inputs.break_on }} but an SSH public key has not been provided"
+          echo "break_on is set to ${{ inputs.break_on }} but no SSH public key has been provided"
           exit 1
-        if: ${{ inputs.break_on != 'never' && inputs.ssh_key == '' }}
+        if: ${{ inputs.break_on != 'never' && inputs.ssh_keys == '' && inputs.ssh_key == '' }}
+
+      - name: Merge ssh_key and ssh_keys input
+        id: ssh_keys
+        run: |
+          if ${{ inputs.ssh_keys == '' && inputs.ssh_key != '' }}; then
+            echo "WARNING: using DEPRECATED input ssh_key instead of ssh_keys"
+            # single string to JSON array
+            ssh_keys="$(jq --raw-input --compact-output '.|[.]' <<<"${{ inputs.ssh_key }}")"
+          else
+            ssh_keys=${{ toJSON(inputs.ssh_keys) }}
+          fi
+          echo "ssh_keys=${ssh_keys}" >> "$GITHUB_OUTPUT"
 
       - name: Install Package
         uses: ConorMacBride/install-package@main
@@ -238,7 +253,7 @@ jobs:
           instance_tags = ["gh-actions-multinode"]
           EOF
 
-          if [[ "${{ inputs.ssh_key }}" != "" ]]; then
+          if ${{ steps.ssh_keys.outputs.ssh_keys  != '' }}; then
             cat << EOF >> terraform.tfvars
           add_ansible_control_fip = true
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
@@ -287,10 +302,9 @@ jobs:
                 kolla_enable_ovn: ${{ env.ENABLE_OVN }}
           EOF
 
-          if [[ "${{ env.SSH_KEY }}" != "" ]]; then
+          if ${{ steps.ssh_keys.outputs.ssh_keys  != '' }}; then
             cat << EOF >> ansible/vars/defaults.yml
-          extra_ssh_public_keys:
-            - "${{ env.SSH_KEY }}"
+          extra_ssh_public_keys: ${{ steps.ssh_keys.outputs.ssh_keys }}
           EOF
           fi
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
@@ -298,7 +312,6 @@ jobs:
           ENABLE_OVN: ${{ inputs.neutron_plugin == 'ovn' }}
           OS_DISTRIBUTION: ${{ inputs.os_distribution }}
           OS_RELEASE: ${{ inputs.os_release }}
-          SSH_KEY: ${{ inputs.ssh_key }}
 
       - name: Terraform Plan
         run: terraform plan -input=false
