@@ -1,6 +1,6 @@
 ---
 # This reusable workflow deploys a multi-node test cluster on a cloud using
-# Terraform, then deploys OpenStack via Kayobe. Tempest is then used to test
+# OpenTofu, then deploys OpenStack via Kayobe. Tempest is then used to test
 # the cloud.
 
 name: Multinode
@@ -32,7 +32,7 @@ on:
         type: string
         default: '9'
       ssh_username:
-        description: User for terraform to access the Multinode hosts
+        description: User for ansible to access the Multinode hosts
         type: string
         default: cloud-user
       neutron_plugin:
@@ -134,7 +134,7 @@ jobs:
       - name: Install Package
         uses: ConorMacBride/install-package@main
         with:
-          apt: git unzip nodejs python3-pip python3-venv rsync openssh-client
+          apt: curl git unzip nodejs python3-pip python3-venv rsync openssh-client
 
       # If testing upgrade, checkout previous release, otherwise checkout current branch
       - name: Checkout ${{ (inputs.upgrade != 'none') && 'previous release' || 'current' }} config
@@ -173,6 +173,16 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
+
+      - name: Install OpenTofu
+        run: |
+          TOFU_VERSION=1.11.3
+          cd /tmp
+          curl -sSfLO https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.tar.gz
+          curl -sSfLO https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_SHA256SUMS
+          sha256sum -c --ignore-missing tofu_${TOFU_VERSION}_SHA256SUMS
+          cd /usr/bin && sudo tar xvf /tmp/tofu_${TOFU_VERSION}_linux_amd64.tar.gz tofu
+          rm /tmp/tofu_${TOFU_VERSION}_*
 
       - name: Setup Ansible
         run: |
@@ -276,13 +286,13 @@ jobs:
           MULTINODE_FIP_POOL: ${{ vars.multinode_fip_pool }}
           SSH_USERNAME: "${{ inputs.ssh_username }}"
 
-      - name: Initialise terraform
-        run: terraform init
+      - name: Initialise OpenTofu
+        run: tofu init
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
 
-      - name: Validate terraform
+      - name: Validate OpenTofu
         id: tf_validate
-        run: terraform validate
+        run: tofu validate
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
 
       - name: Configure Ansible
@@ -313,18 +323,18 @@ jobs:
           OS_DISTRIBUTION: ${{ inputs.os_distribution }}
           OS_RELEASE: ${{ inputs.os_release }}
 
-      - name: Terraform Plan
-        run: terraform plan -input=false
+      - name: Tofu Plan
+        run: tofu plan -input=false
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
           OS_CLOUD: ${{ vars.OS_CLOUD }}
           OS_APPLICATION_CREDENTIAL_ID: ${{ secrets.OS_APPLICATION_CREDENTIAL_ID }}
           OS_APPLICATION_CREDENTIAL_SECRET: ${{ secrets.OS_APPLICATION_CREDENTIAL_SECRET }}
 
-      - name: Terraform Apply
+      - name: Tofu Apply
         run: |
           for attempt in $(seq 3); do
-              if terraform apply -auto-approve -input=false; then
+              if tofu apply -auto-approve -input=false; then
                   echo "Created infrastructure on attempt $attempt"
                   exit 0
               fi
@@ -501,7 +511,7 @@ jobs:
       - name: Destroy
         run: |
           for attempt in $(seq 5); do
-              if terraform destroy -auto-approve -input=false -lock-timeout=200s; then
+              if tofu destroy -auto-approve -input=false -lock-timeout=200s; then
                   echo "Destroyed infrastructure on attempt $attempt"
                   exit 0
               fi
@@ -510,7 +520,7 @@ jobs:
           done
           echo "Failed to destroy infrastructure after $attempt attempts"
           echo "Forcefully destroying infrastructure"
-          terraform destroy -auto-approve -input=false -lock=false
+          tofu destroy -auto-approve -input=false -lock=false
           exit 1
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
