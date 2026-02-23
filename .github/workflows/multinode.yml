@@ -32,7 +32,7 @@ on:
         type: string
         default: '9'
       ssh_username:
-        description: User for ansible to access the Multinode hosts
+        description: User to access the Multinode hosts
         type: string
         default: cloud-user
       neutron_plugin:
