@@ -132,7 +132,7 @@ jobs:
           echo "ssh_keys=${ssh_keys}" >> "$GITHUB_OUTPUT"
 
       - name: Install Package
-        uses: ConorMacBride/install-package@main
+        uses: ConorMacBride/install-package@3e7ad059e07782ee54fa35f827df52aae0626f30  # v1.1.0
         with:
           apt: git unzip nodejs python3-pip python3-venv rsync openssh-client
 
@@ -170,7 +170,7 @@ jobs:
           fi
 
       - name: Install terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           terraform_wrapper: false
 
@@ -455,7 +455,7 @@ jobs:
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
       - name: Send message to Slack via Workflow Builder
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95  # v3.0.1
         with:
           payload: |
             {
