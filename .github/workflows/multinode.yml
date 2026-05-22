@@ -4,7 +4,7 @@
 # the cloud.
 
 name: Multinode
-on:
+"on":
   workflow_call:
     inputs:
       multinode_name:
@@ -97,7 +97,7 @@ jobs:
     permissions: {}
     timeout-minutes: 2880
     env:
-      ANSIBLE_FORCE_COLOR: True
+      ANSIBLE_FORCE_COLOR: "True"
       KAYOBE_ENVIRONMENT: ci-multinode
       KAYOBE_VAULT_PASSWORD: ${{ secrets.KAYOBE_VAULT_PASSWORD_CI_MULTINODE }}
     steps:
@@ -142,6 +142,7 @@ jobs:
         with:
           repository: stackhpc/stackhpc-kayobe-config
           ref: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
+          persist-credentials: false
 
       - name: Checkout ${{ (inputs.upgrade == 'major') && 'previous release' || 'current' }} terraform-kayobe-multinode
         uses: actions/checkout@v4
@@ -149,6 +150,7 @@ jobs:
           repository: stackhpc/terraform-kayobe-multinode
           ref: ${{ (inputs.upgrade == 'major') && inputs.terraform_kayobe_multinode_previous_version || inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
+          persist-credentials: false
 
       - name: Make sure dockerd is running and test Docker
         run: |
@@ -372,6 +374,7 @@ jobs:
           repository: stackhpc/terraform-kayobe-multinode
           ref: ${{ inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
+          persist-credentials: false
         if: inputs.upgrade == 'major'
 
       - name: Pop stashed terraform-kayobe-multinode changes
