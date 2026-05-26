@@ -4,7 +4,7 @@
 # the cloud.
 
 name: Multinode
-on:
+"on":
   workflow_call:
     inputs:
       multinode_name:
@@ -97,7 +97,7 @@ jobs:
     permissions: {}
     timeout-minutes: 2880
     env:
-      ANSIBLE_FORCE_COLOR: True
+      ANSIBLE_FORCE_COLOR: "True"
       KAYOBE_ENVIRONMENT: ci-multinode
       KAYOBE_VAULT_PASSWORD: ${{ secrets.KAYOBE_VAULT_PASSWORD_CI_MULTINODE }}
     steps:
@@ -132,7 +132,7 @@ jobs:
           echo "ssh_keys=${ssh_keys}" >> "$GITHUB_OUTPUT"
 
       - name: Install Package
-        uses: ConorMacBride/install-package@main
+        uses: ConorMacBride/install-package@3e7ad059e07782ee54fa35f827df52aae0626f30  # v1.1.0
         with:
           apt: git unzip nodejs python3-pip python3-venv rsync openssh-client
 
@@ -142,6 +142,7 @@ jobs:
         with:
           repository: stackhpc/stackhpc-kayobe-config
           ref: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
+          persist-credentials: false
 
       - name: Checkout ${{ (inputs.upgrade == 'major') && 'previous release' || 'current' }} terraform-kayobe-multinode
         uses: actions/checkout@v4
@@ -149,6 +150,7 @@ jobs:
           repository: stackhpc/terraform-kayobe-multinode
           ref: ${{ (inputs.upgrade == 'major') && inputs.terraform_kayobe_multinode_previous_version || inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
+          persist-credentials: false
 
       - name: Make sure dockerd is running and test Docker
         run: |
@@ -170,7 +172,7 @@ jobs:
           fi
 
       - name: Install terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           terraform_wrapper: false
 
@@ -372,6 +374,7 @@ jobs:
           repository: stackhpc/terraform-kayobe-multinode
           ref: ${{ inputs.terraform_kayobe_multinode_version }}
           path: terraform-kayobe-multinode
+          persist-credentials: false
         if: inputs.upgrade == 'major'
 
       - name: Pop stashed terraform-kayobe-multinode changes
@@ -454,21 +457,19 @@ jobs:
             ${{ github.workspace }}/logs/
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
-      - name: Send message to Slack via Workflow Builder
-        uses: slackapi/slack-github-action@v1.26.0
+      - name: Send message to Slack via Incoming Webhook
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95  # v3.0.1
         with:
+          errors: true
           payload: |
-            {
-              "channel-id": "${{ env.SLACK_CHANNEL_ID }}",
-              "inputs": "${{ env.INPUTS }}",
-              "message": "${{ env.MESSAGE }}",
-              "results-url": "${{ env.RESULTS_URL }}",
-              "workflow-url": "${{ env.WORKFLOW_URL }}"
-            }
+            channel: C03B28HRP53  # #release-train-alerts
+            inputs: "${{ env.INPUTS }}"
+            message: "${{ env.MESSAGE }}"
+            results-url: "${{ env.RESULTS_URL }}"
+            workflow-url: "${{ env.WORKFLOW_URL }}"
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          # #release-train-alerts
-          SLACK_CHANNEL_ID: C03B28HRP53
           INPUTS: >-
             name: ${{ inputs.multinode_name }}\n
             controllers: ${{ inputs.multinode_controller_count }}\n
