@@ -176,7 +176,7 @@ jobs:
 
       - name: Install OpenTofu
         run: |
-          TOFU_VERSION=1.11.3
+          TOFU_VERSION=1.11.8
           cd /tmp
           curl -sSfLO https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.tar.gz
           curl -sSfLO https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_SHA256SUMS
