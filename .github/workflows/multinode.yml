@@ -169,11 +169,6 @@ jobs:
             echo image_name=${{ inputs.multinode_image_override }} >> $GITHUB_OUTPUT
           fi
 
-      - name: Install terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_wrapper: false
-
       - name: Install OpenTofu
         run: |
           TOFU_VERSION=1.11.8
