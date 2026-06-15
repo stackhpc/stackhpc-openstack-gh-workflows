@@ -138,14 +138,14 @@ jobs:
 
       # If testing upgrade, checkout previous release, otherwise checkout current branch
       - name: Checkout ${{ (inputs.upgrade != 'none') && 'previous release' || 'current' }} config
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: stackhpc/stackhpc-kayobe-config
           ref: ${{ (inputs.upgrade != 'none') && inputs.stackhpc_kayobe_config_previous_version || inputs.stackhpc_kayobe_config_version }}
           persist-credentials: false
 
       - name: Checkout ${{ (inputs.upgrade == 'major') && 'previous release' || 'current' }} terraform-kayobe-multinode
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: stackhpc/terraform-kayobe-multinode
           ref: ${{ (inputs.upgrade == 'major') && inputs.terraform_kayobe_multinode_previous_version || inputs.terraform_kayobe_multinode_version }}
