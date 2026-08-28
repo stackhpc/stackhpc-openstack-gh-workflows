@@ -498,7 +498,7 @@ jobs:
       - name: Break on failure
         run: |
           sleep ${{ inputs.break_duration }}m
-        if: ${{ failure() && steps.config_ach.outcome == 'success' && contains(fromJSON('["failure", "always"]'), inputs.break_on) }}
+        if: ${{ failure() && contains(fromJSON('["failure", "always"]'), inputs.break_on) }}
 
       - name: Break on success
         run: |
