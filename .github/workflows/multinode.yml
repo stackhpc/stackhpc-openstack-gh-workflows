@@ -355,7 +355,7 @@ jobs:
           fi
           if $(which apt >/dev/null 2>&1); then
               sudo apt update
-              sudo apt -y install kernel-modules-extra
+              sudo apt -y install linux-generic
           fi &&
           source venv/bin/activate &&
           ansible-playbook -v -i ansible/inventory.yml ansible/configure-hosts.yml
