@@ -350,7 +350,13 @@ jobs:
       - name: Configure Ansible control host
         id: config_ach
         run: |
-          sudo dnf install -y kernel-modules-extra &&
+          if $(which dnf >/dev/null 2>&1); then
+            sudo dnf -y install kernel-modules-extra
+          fi
+          if $(which apt >/dev/null 2>&1); then
+              sudo apt update
+              sudo apt -y install kernel-modules-extra
+          fi &&
           source venv/bin/activate &&
           ansible-playbook -v -i ansible/inventory.yml ansible/configure-hosts.yml
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
