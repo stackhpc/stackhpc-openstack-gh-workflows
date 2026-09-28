@@ -433,6 +433,11 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: inputs.upgrade != 'none'
 
+      - name: Run oslo-config-validator
+        run: |
+          source venv/bin/activate &&
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo-config-validator
+
       - name: Download deployment logs
         run: |
           mkdir -p ${{ github.workspace }}/logs &&
@@ -441,10 +446,6 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
 
-      - name: Run oslo-config-validator
-        run: |
-          source venv/bin/activate &&
-          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo-config-validator
 
       - name: Get number of errors
         id: count-errors
