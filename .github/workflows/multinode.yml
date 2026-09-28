@@ -94,7 +94,9 @@ jobs:
     name: Multinode
     runs-on: arc-skc-aio-runner
     environment: Leafcloud
-    permissions: {}
+    permissions: {
+      checks: write
+    }
     timeout-minutes: 2880
     env:
       ANSIBLE_FORCE_COLOR: "True"
@@ -423,6 +425,11 @@ jobs:
           ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=minor_upgrade
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: inputs.upgrade == 'minor'
+
+      - name: Run oslo-config-validator
+        run: |
+          source venv/bin/activate &&
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo-config-validator -e GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Tempest tests
         run: |
