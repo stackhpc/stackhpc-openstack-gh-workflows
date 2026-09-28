@@ -426,11 +426,6 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: inputs.upgrade == 'minor'
 
-      - name: Run oslo-config-validator
-        run: |
-          source venv/bin/activate &&
-          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo-config-validator -e GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
-
       - name: Run Tempest tests
         run: |
           source venv/bin/activate &&
@@ -445,6 +440,45 @@ jobs:
           ansible-playbook -v -i ansible/inventory.yml ansible/fetch-logs.yml -e fetch_logs_dest=${{ github.workspace }}/logs
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
+
+      - name: Run oslo-config-validator
+        run: |
+          source venv/bin/activate &&
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo-config-validator
+
+      - name: Get number of errors
+        id: count-errors
+        shell: bash
+        run: |
+            echo ERROR_COUNT=$(grep -rnw ${{ github.workspace }}/logs/oslo-config-validator-results -e 'ERROR' | wc -l) >> "$GITHUB_OUTPUT"
+
+      - name: Get number of warnings
+        id: count-warnings
+        shell: bash
+        run: |
+            echo WARNING_COUNT=$(grep -rnw ${{ github.workspace}}/logs/oslo-config-validator-results -e 'WARNING' | wc -l) >> "$GITHUB_OUTPUT"
+
+      - if: ${{ steps.count-errors.outputs.ERROR_COUNT != '0' || steps.count-warnings.outputs.WARNING_COUNT != 0 }}
+        shell: bash
+        run: |
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ inputs.gh-token }}" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              https://api.github.com/repos/${{ github.repository }}/check-runs \
+              -d '{"name": "oslo-config-validator, ${{ inputs.run-environment }}", "head_sha": "${{ github.event.pull_request.head.sha }}", "status": "completed", "conclusion": "failure", "output": {"title": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors, ${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings", "summary": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors\n${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings"}}'
+
+      - if: ${{ steps.count-errors.outputs.ERROR_COUNT == '0' && steps.count-warnings.outputs.WARNING_COUNT == 0 }}
+        shell: bash
+        run: |
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ inputs.gh-token }}" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              https://api.github.com/repos/${{ github.repository }}/check-runs \
+              -d '{"name": "oslo-config-validator, ${{ inputs.run-environment }}", "head_sha": "${{ github.event.pull_request.head.sha }}", "status": "completed", "conclusion": "success", "output": {"title": "Passed", "summary": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors\n${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings"}}'
 
       - name: Print final lines of tmux log
         run: |
