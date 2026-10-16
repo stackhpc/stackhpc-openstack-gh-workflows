@@ -437,7 +437,7 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         run: |
           source venv/bin/activate &&
-          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo-config-validator
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo_config_validator
 
       - name: Download deployment logs
         run: |
