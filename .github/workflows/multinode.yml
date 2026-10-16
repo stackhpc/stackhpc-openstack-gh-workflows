@@ -465,7 +465,7 @@ jobs:
             curl -L \
               -X POST \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ inputs.gh-token }}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "X-GitHub-Api-Version: 2026-03-10" \
               https://api.github.com/repos/${{ github.repository }}/check-runs \
               -d '{"name": "oslo-config-validator, ${{ inputs.run-environment }}", "head_sha": "${{ github.event.pull_request.head.sha }}", "status": "completed", "conclusion": "failure", "output": {"title": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors, ${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings", "summary": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors\n${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings"}}'
@@ -476,7 +476,7 @@ jobs:
             curl -L \
               -X POST \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ inputs.gh-token }}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "X-GitHub-Api-Version: 2026-03-10" \
               https://api.github.com/repos/${{ github.repository }}/check-runs \
               -d '{"name": "oslo-config-validator, ${{ inputs.run-environment }}", "head_sha": "${{ github.event.pull_request.head.sha }}", "status": "completed", "conclusion": "success", "output": {"title": "Passed", "summary": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors\n${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings"}}'
