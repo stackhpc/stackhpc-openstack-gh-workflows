@@ -459,6 +459,19 @@ jobs:
         run: |
             echo WARNING_COUNT=$(grep -rnw ${{ github.workspace}}/logs/oslo-config-validator-results -e 'WARNING' | wc -l) >> "$GITHUB_OUTPUT"
 
+      - name: Save test summary to text file
+        shell: bash
+        run: |
+            echo "${{ steps.count-errors.outputs.ERROR_COUNT }} errors, ${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings" > ${{ github.workspace }}/logs/oslo-config-validator-summary.txt
+
+      - name: Upload oslo config validator summary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oslo-config-validator-summary.txt
+          path: |
+            ${{ github.workspace }}/logs/oslo-config-validator-summary.txt
+        if: ${{ always() && steps.config_ach.outcome == 'success' }}
+
       - if: ${{ steps.count-errors.outputs.ERROR_COUNT != '0' || steps.count-warnings.outputs.WARNING_COUNT != 0 }}
         shell: bash
         run: |
