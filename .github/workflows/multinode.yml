@@ -273,7 +273,9 @@ jobs:
           instance_tags = ["gh-actions-multinode"]
           EOF
 
-          if ${{ steps.ssh_keys.outputs.ssh_keys  != '' }}; then
+          # Only Leafcloud needs a floating IP. Other clouds' runners reach the
+          # Ansible control host on its private address.
+          if ${{ steps.ssh_keys.outputs.ssh_keys != '' && inputs.runner_env == 'Leafcloud' }}; then
             cat << EOF >> terraform.tfvars
           add_ansible_control_fip = true
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
