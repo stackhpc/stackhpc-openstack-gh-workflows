@@ -465,7 +465,7 @@ jobs:
             echo "${{ steps.count-errors.outputs.ERROR_COUNT }} errors, ${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings" > ${{ github.workspace }}/logs/oslo-config-validator-summary.txt
 
       - name: Upload oslo config validator summary as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: oslo-config-validator-summary.txt
           archive: false
