@@ -468,6 +468,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: oslo-config-validator-summary.txt
+          archive: false
           path: |
             ${{ github.workspace }}/logs/oslo-config-validator-summary.txt
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
