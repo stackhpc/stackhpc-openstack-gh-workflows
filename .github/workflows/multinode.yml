@@ -281,6 +281,14 @@ jobs:
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
           EOF
           fi
+
+          # On SMS Lab the runner needs kayobe-runner, matching AIO job use.
+          # This is specific to where (target project) the CI runs at the moment
+          if ${{ inputs.runner_env != 'Leafcloud' }}; then
+            cat << EOF >> terraform.tfvars
+          ansible_control_security_groups = ["default", "kayobe-runner"]
+          EOF
+          fi
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
           MULTINODE_NAME: "${{ inputs.multinode_name }}"
