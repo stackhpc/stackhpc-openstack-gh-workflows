@@ -281,6 +281,14 @@ jobs:
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
           EOF
           fi
+
+          # On SMS Lab the runner needs kayobe-runner, matching AIO job use.
+          # This is specific to where (target project) the CI runs at the moment
+          if ${{ inputs.runner_env != 'Leafcloud' }}; then
+            cat << EOF >> terraform.tfvars
+          ansible_control_security_groups = ["default", "kayobe-runner"]
+          EOF
+          fi
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
           MULTINODE_NAME: "${{ inputs.multinode_name }}"
@@ -322,7 +330,6 @@ jobs:
                 os_distribution: ${{ env.OS_DISTRIBUTION }}
                 os_release: "${{ env.OS_RELEASE }}"
                 kolla_enable_ovn: ${{ env.ENABLE_OVN }}
-                octavia_amphora_driver_enabled: ${{ env.ENABLE_AMPHORA }}
           EOF
 
           if ${{ steps.ssh_keys.outputs.ssh_keys  != '' }}; then
@@ -333,7 +340,6 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         env:
           ENABLE_OVN: ${{ inputs.neutron_plugin == 'ovn' }}
-          ENABLE_AMPHORA: ${{ vars.multinode_nested_virt == 'true' }}
           OS_DISTRIBUTION: ${{ inputs.os_distribution }}
           OS_RELEASE: ${{ inputs.os_release }}
 
