@@ -94,7 +94,9 @@ jobs:
     name: Multinode
     runs-on: arc-skc-aio-runner
     environment: Leafcloud
-    permissions: {}
+    permissions: {
+      checks: write
+    }
     timeout-minutes: 2880
     env:
       ANSIBLE_FORCE_COLOR: "True"
@@ -431,6 +433,12 @@ jobs:
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: inputs.upgrade != 'none'
 
+      - name: Run oslo-config-validator
+        working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
+        run: |
+          source venv/bin/activate &&
+          ansible-playbook -v -i ansible/inventory.yml ansible/deploy-openstack.yml -e multinode_command=oslo_config_validator
+
       - name: Download deployment logs
         run: |
           mkdir -p ${{ github.workspace }}/logs &&
@@ -438,6 +446,54 @@ jobs:
           ansible-playbook -v -i ansible/inventory.yml ansible/fetch-logs.yml -e fetch_logs_dest=${{ github.workspace }}/logs
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
         if: ${{ always() && steps.config_ach.outcome == 'success' }}
+
+      - name: Get number of errors
+        id: count-errors
+        shell: bash
+        run: |
+            echo ERROR_COUNT=$(grep -rnw ${{ github.workspace }}/logs/oslo-config-validator-results -e 'ERROR' | wc -l) >> "$GITHUB_OUTPUT"
+
+      - name: Get number of warnings
+        id: count-warnings
+        shell: bash
+        run: |
+            echo WARNING_COUNT=$(grep -rnw ${{ github.workspace}}/logs/oslo-config-validator-results -e 'WARNING' | wc -l) >> "$GITHUB_OUTPUT"
+
+      - name: Save test summary to text file
+        shell: bash
+        run: |
+            echo "${{ steps.count-errors.outputs.ERROR_COUNT }} errors, ${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings" > ${{ github.workspace }}/logs/oslo-config-validator-summary.txt
+
+      - name: Upload oslo config validator summary as artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: oslo-config-validator-summary.txt
+          archive: false
+          path: |
+            ${{ github.workspace }}/logs/oslo-config-validator-summary.txt
+        if: ${{ always() && steps.config_ach.outcome == 'success' }}
+
+      - if: ${{ steps.count-errors.outputs.ERROR_COUNT != '0' || steps.count-warnings.outputs.WARNING_COUNT != 0 }}
+        shell: bash
+        run: |
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              https://api.github.com/repos/${{ github.repository }}/check-runs \
+              -d '{"name": "oslo-config-validator, multinode", "head_sha": "${{ github.sha }}", "status": "completed", "conclusion": "neutral", "output": {"title": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors, ${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings", "summary": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors\n${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings"}}'
+
+      - if: ${{ steps.count-errors.outputs.ERROR_COUNT == '0' && steps.count-warnings.outputs.WARNING_COUNT == 0 }}
+        shell: bash
+        run: |
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              https://api.github.com/repos/${{ github.repository }}/check-runs \
+              -d '{"name": "oslo-config-validator, multinode", "head_sha": "${{ github.sha }}", "status": "completed", "conclusion": "success", "output": {"title": "Passed", "summary": "${{ steps.count-errors.outputs.ERROR_COUNT }} errors\n${{ steps.count-warnings.outputs.WARNING_COUNT }} warnings"}}'
 
       - name: Print final lines of tmux log
         run: |
