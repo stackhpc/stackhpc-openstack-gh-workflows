@@ -7,6 +7,10 @@ name: Multinode
 "on":
   workflow_call:
     inputs:
+      runner_env:
+        description: GitHub environment naming the cloud to deploy on
+        type: string
+        default: SMS Lab
       multinode_name:
         description: Multinode cluster name
         type: string
@@ -90,10 +94,18 @@ name: Multinode
         required: false
 
 jobs:
+  runner-selection:
+    uses: stackhpc/stackhpc-kayobe-config/.github/workflows/runner-selector.yml@stackhpc/2026.1
+    with:
+      runner_env: ${{ inputs.runner_env }}
+
   multinode:
     name: Multinode
-    runs-on: arc-skc-aio-runner
-    environment: Leafcloud
+    needs: runner-selection
+    runs-on: ${{ needs.runner-selection.outputs.runner_name_aio }}
+    environment:
+      name: ${{ inputs.runner_env }}
+      deployment: false
     permissions: {
       checks: write
     }
@@ -263,10 +275,20 @@ jobs:
           instance_tags = ["gh-actions-multinode"]
           EOF
 
-          if ${{ steps.ssh_keys.outputs.ssh_keys  != '' }}; then
+          # Only Leafcloud needs a floating IP. Other clouds' runners reach the
+          # Ansible control host on its private address.
+          if ${{ steps.ssh_keys.outputs.ssh_keys != '' && inputs.runner_env == 'Leafcloud' }}; then
             cat << EOF >> terraform.tfvars
           add_ansible_control_fip = true
           ansible_control_fip_pool = "${{ env.MULTINODE_FIP_POOL }}"
+          EOF
+          fi
+
+          # On SMS Lab the runner needs kayobe-runner, matching AIO job use.
+          # This is specific to where (target project) the CI runs at the moment
+          if ${{ inputs.runner_env != 'Leafcloud' }}; then
+            cat << EOF >> terraform.tfvars
+          ansible_control_security_groups = ["default", "kayobe-runner"]
           EOF
           fi
         working-directory: ${{ github.workspace }}/terraform-kayobe-multinode
